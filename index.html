@@ -63,8 +63,9 @@
             visibility: hidden;
             opacity: 0;
             transition: opacity 0.3s;
+            z-index: 10;
         }
-        .screen.active { visibility: visible; opacity: 1; }
+        .screen.active { visibility: visible; opacity: 1; z-index: 20;}
 
         .glass-box {
             background: var(--glass-bg);
@@ -76,6 +77,7 @@
             text-align: center;
             backdrop-filter: blur(10px);
             box-shadow: 0 0 30px rgba(0, 229, 255, 0.1);
+            position: relative;
         }
 
         h1 {
@@ -119,6 +121,20 @@
             margin-top: 10px;
         }
         .btn:active { transform: scale(0.95); }
+
+        .admin-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            opacity: 0.15;
+            cursor: pointer;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        .admin-btn:hover { opacity: 1; text-shadow: 0 0 10px var(--neon-blue); }
 
         .hud-top {
             position: absolute;
@@ -254,20 +270,6 @@
 
         .result-code { background: #000; padding: 12px; border: 2px dashed var(--neon-blue); color: var(--neon-blue); font-size: 22px; margin: 20px 0; letter-spacing: 3px; }
 
-        .admin-btn {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            opacity: 0.15;
-            cursor: pointer;
-            transition: opacity 0.3s;
-            z-index: 100;
-        }
-        .admin-btn:hover { opacity: 1; text-shadow: 0 0 10px var(--neon-blue); }
-
         @media (max-width: 480px) {
             .terminal-text { font-size: 16px; min-height: 160px; }
             .letter-btn { width: 40px; height: 45px; font-size: 20px; }
@@ -278,7 +280,6 @@
 </head>
 <body>
 
-    <!-- ... existing code ... -->
     <canvas id="bgCanvas"></canvas>
     <canvas id="fxCanvas"></canvas>
 
@@ -286,7 +287,7 @@
 
     <div class="ui-layer">
         
-        <!-- MÀN HÌNH CHỜ -->
+        <!-- MÀN HÌNH CHỜ & ĐĂNG NHẬP -->
         <div class="screen active" id="login-screen">
             <div class="glass-box">
                 <h1>GIẢI MÃ VỆ TINH</h1>
@@ -303,7 +304,19 @@
                 <div id="errorMsg" style="color: var(--neon-red); margin-top: 10px; font-size: 14px; min-height: 20px;"></div>
                 
                 <!-- Nút ẩn dành cho giáo viên -->
-                <button class="admin-btn" id="btnAdmin" title="Giáo viên">🔒</button>
+                <button class="admin-btn" id="btnShowAdmin" title="Chỉ dành cho Giáo viên">🔒</button>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH XÁC THỰC GIÁO VIÊN (Thay thế Alert/Prompt mặc định) -->
+        <div class="screen" id="admin-screen" style="background: rgba(0,0,0,0.8);">
+            <div class="glass-box" style="border-color: var(--neon-red); box-shadow: 0 0 30px rgba(255,0,60,0.2);">
+                <h2 style="color: var(--neon-red); margin-bottom: 10px; font-family: 'Teko'; font-size: 32px;">XÁC THỰC GIÁO VIÊN</h2>
+                <p style="color: #bbb; font-size: 14px; margin-bottom: 15px;">Nhập mật khẩu để khôi phục lượt chơi cho học sinh.</p>
+                <input type="password" id="adminPwd" placeholder="Mật khẩu" style="border-color: var(--neon-red); color: var(--neon-red);">
+                <button class="btn" id="btnConfirmAdmin" style="background: linear-gradient(45deg, #aa0000, var(--neon-red));">KHÔI PHỤC LƯỢT CHƠI</button>
+                <button class="btn btn-clear" id="btnCancelAdmin">HỦY BỎ</button>
+                <div id="adminMsg" style="color: var(--neon-red); margin-top: 10px; font-size: 14px; min-height: 20px;"></div>
             </div>
         </div>
 
@@ -342,7 +355,6 @@
                 <p style="color: var(--neon-green); font-size: 14px; margin-bottom: 15px;">
                     (Hãy chụp lại màn hình này nộp trên K12 Online để nhận điểm)
                 </p>
-                <!-- Nút này cho phép load lại trang, nhưng lượt chơi vẫn bị trừ trong local storage -->
                 <button class="btn" onclick="location.reload()">KẾT THÚC / CHƠI LẠI</button>
             </div>
         </div>
@@ -350,37 +362,37 @@
     </div>
 
     <script>
-        // Ngân hàng dữ liệu kiến thức (Đã cập nhật hệ quy chiếu mới nhất)
+        // Cập nhật kiến thức Hành chính (2025) & Địa lí Tự nhiên lớp 12
         const database = [
             { c: "Phần đất liền, phạm vi lãnh thổ Việt Nam được xác định bởi các điểm cực. Điểm cực Bắc ở vĩ độ 23°23'B tại xã Lũng Cú, thuộc tỉnh nào?", k: "TUYENQUANG" },
             { c: "Điểm cực Nam của nước ta ở vĩ độ 8°34'B tại xã Đất Mũi, thuộc tỉnh nào?", k: "CAMAU" },
             { c: "Điểm cực Tây của nước ta ở kinh độ 102°09'Đ tại xã Sín Thầu, thuộc tỉnh nào?", k: "DIENBIEN" },
             { c: "Điểm cực Đông của nước ta ở kinh độ 109°28'Đ tại xã Đại Lãnh, thuộc tỉnh nào?", k: "KHANHHOA" },
+            { c: "Đường bờ biển nước ta kéo dài 3260 km, điểm khởi đầu từ tỉnh Quảng Ninh và điểm kết thúc nằm ở tỉnh nào?", k: "ANGIANG" },
             { c: "Lãnh thổ nước ta tiếp giáp với Biển Đông thông ra Thái Bình Dương, gần nơi giao nhau của hai vành đai sinh khoáng lớn là Thái Bình Dương và vành đai nào?", k: "DIATRUNGHAI" },
-            { c: "Vùng đất liền nước ta có diện tích hơn 331 nghìn km², bao gồm toàn bộ phần đất liền được xác định trong phạm vi biên giới và các quần đảo, trong đó có quần đảo Hoàng Sa. Quần đảo này thuộc đơn vị hành chính nào?", k: "DANANG" },
-            { c: "Quần đảo Trường Sa thuộc vùng đất liền nước ta có diện tích hơn 331 nghìn km², bao gồm toàn bộ phần đất liền được xác định trong phạm vi biên giới và các quần đảo. Quần đảo Trường Sa thuộc tỉnh nào?", k: "KHANHHOA" },
+            { c: "Quần đảo Trường Sa thuộc vùng đất liền nước ta có diện tích hơn 331 nghìn km². Quần đảo Trường Sa thuộc tỉnh nào?", k: "KHANHHOA" },
+            { c: "Quần đảo Hoàng Sa là lãnh thổ thiêng liêng của tổ quốc. Hiện nay quần đảo này thuộc quyền quản lý hành chính của đơn vị nào?", k: "DANANG" },
+            { c: "Đảo có diện tích lớn nhất Việt Nam, được mệnh danh là Đảo Ngọc, hiện nay thuộc địa giới hành chính của tỉnh An Giang. Tên đảo là gì?", k: "PHUQUOC" },
             { c: "Vùng biển Việt Nam thuộc Biển Đông có diện tích khoảng 1 triệu km², bao gồm nội thuỷ, lãnh hải, vùng tiếp giáp lãnh hải, vùng đặc quyền kinh tế và vùng nào?", k: "THEMLUCDIA" },
+            { c: "Tỉnh duy nhất của nước ta nằm ở vị trí ngã ba Đông Dương, tiếp giáp với cả Lào và Campuchia là tỉnh nào?", k: "QUANGNGAI" },
+            { c: "Tỉnh duy nhất của nước ta vừa có đường biên giới trên đất liền, vừa có đường biên giới trên biển tiếp giáp với Trung Quốc là tỉnh nào?", k: "QUANGNINH" },
+            { c: "Điện Biên là tỉnh có vị trí chiến lược, nằm ở ngã ba biên giới giữa Việt Nam, Lào và quốc gia nào?", k: "TRUNGQUOC" },
             { c: "Vùng biển nằm phía trong đường cơ sở và là bộ phận lãnh thổ của Việt Nam là vùng nào?", k: "NOITHUY" },
             { c: "Vùng biển có chiều rộng 12 hải lí tính từ đường cơ sở ra phía biển, ranh giới ngoài của nó là biên giới quốc gia trên biển, là vùng nào?", k: "LANHHAI" },
             { c: "Vùng biển tiếp liền và nằm ngoài lãnh hải Việt Nam, có chiều rộng 12 hải lí tính từ ranh giới ngoài của lãnh hải là vùng nào?", k: "TIEPGIAPLANHHAI" },
             { c: "Vùng biển tiếp liền và nằm ngoài lãnh hải Việt Nam, hợp với lãnh hải thành một vùng biển có chiều rộng 200 hải lí tính từ đường cơ sở là vùng nào?", k: "DACQUYENKINHTE" },
-            { c: "Vùng đáy biển và lòng đất dưới đáy biển, tiếp liền và nằm ngoài lãnh hải Việt Nam, trên toàn bộ phần kéo dài tự nhiên của lãnh thổ đất liền, các đảo và quần đảo của Việt Nam cho đến mép ngoài của rìa lục địa là gì?", k: "THEMLUCDIA" },
             { c: "Khoảng không gian bao trùm lên lãnh thổ nước ta, trên đất liền được xác định bằng các đường biên giới; trên biển là ranh giới phía ngoài của lãnh hải và không gian của các đảo là vùng nào?", k: "VUNGTROI" },
             { c: "Việt Nam nằm hoàn toàn trong vùng nội chí tuyến bán cầu Bắc, trong khu vực thường xuyên chịu ảnh hưởng của gió Mậu dịch và gió nào?", k: "GIOMUA" },
-            { c: "Hệ sinh thái rừng nhiệt đới ẩm gió mùa phát triển trên đất feralit là cảnh quan tiêu biểu cho thiên nhiên nước ta. Phần đất liền của nước ta hẹp ngang, lại nằm kề Biển Đông có nguồn ẩm dồi dào nên thiên nhiên nước ta chịu ảnh hưởng sâu sắc của yếu tố nào?", k: "BIEN" },
-            { c: "Thiên nhiên nhiệt đới ẩm gió mùa ở nước ta thể hiện rõ rệt ở tất cả các thành phần tự nhiên. Tổng lượng mưa năm ở nước ta từ 1500 - 2000 mm, ở những vùng núi cao và các sườn núi chắn gió, lượng mưa có thể đạt bao nhiêu mm?", k: "BAMGANNAMM" },
             { c: "Gió mùa đông (từ tháng 11 đến tháng 4 năm sau) ở miền Bắc chịu tác động của khối khí lạnh từ áp cao Xibia di chuyển theo hướng đông bắc, thường gọi là gió gì?", k: "GIOMUADONGBAC" },
-            { c: "Nửa đầu mùa đông, gió mùa Đông Bắc di chuyển chủ yếu qua lục địa tạo nên thời tiết lạnh khô. Nửa sau mùa đông, gió di chuyển về phía đông qua biển, gây ra thời tiết lạnh ẩm và hiện tượng gì ở đồng bằng sông Hồng?", k: "MUAPHUN" },
+            { c: "Nửa đầu mùa đông, gió mùa Đông Bắc tạo nên thời tiết lạnh khô. Nửa sau mùa đông, gió gây ra thời tiết lạnh ẩm và hiện tượng gì ở đồng bằng sông Hồng?", k: "MUAPHUN" },
             { c: "Gió mùa Đông Bắc suy yếu dần khi di chuyển xuống phía nam và hầu như bị ngăn lại ở dãy núi nào?", k: "BACHMA" },
-            { c: "Cùng với gió mùa Đông Bắc, ở nước ta còn có sự hoạt động của Tín phong bán cầu Bắc. Ở miền Bắc, Tín phong hoạt động xen kẽ giữa các đợt gió mùa Đông Bắc. Từ Đà Nẵng trở vào, Tín phong thổi theo hướng nào chiếm ưu thế?", k: "DONGBAC" },
-            { c: "Đầu mùa hạ, khối khí nhiệt đới ẩm từ Bắc Ấn Độ Dương di chuyển theo hướng tây nam, gây mưa lớn cho Nam Bộ và Tây Nguyên. Khi vượt qua dãy Trường Sơn, khối khí này trở nên khô nóng. Hiện tượng này gọi là gì?", k: "HIEUUNGPHON" },
-            { c: "Vào giữa và cuối mùa hạ, gió mùa Tây Nam xuất phát từ áp cao cận chí tuyến bán cầu Nam hoạt động mạnh, gây ra mưa lớn và kéo dài cho Nam Bộ và Tây Nguyên. Ở đồng bằng sông Hồng, gió này thổi vào theo hướng nào?", k: "DONGNAM" },
-            { c: "Do đặc điểm nóng ẩm của khí hậu, quá trình phong hoá diễn ra mạnh mẽ, làm cho bề mặt địa hình bị thay đổi, đặc biệt là sự hình thành các dạng hang động, thung khô ở vùng núi đá vôi. Địa hình này gọi là gì?", k: "CAXTO" },
-            { c: "Quá trình xâm thực diễn ra mạnh mẽ ở miền đồi núi, dẫn đến bồi tụ ở vùng đồng bằng. Hệ quả của quá trình xâm thực, bào mòn là sự bồi tụ, hình thành các đồng bằng châu thổ rộng lớn như đồng bằng sông Cửu Long và đồng bằng nào?", k: "SONGHONG" },
-            { c: "Tính chất nhiệt đới ẩm gió mùa biểu hiện ở mạng lưới sông ngòi dày đặc, nhiều nước, giàu phù sa, và chế độ nước theo mùa. Mạng lưới sông ngòi nước ta có khoảng bao nhiêu con sông dài trên 10 km?", k: "HAIBAHAUBAO" },
-            { c: "Trong vùng khí hậu nhiệt đới ẩm, quá trình hình thành đất đặc trưng là quá trình feralit. Mưa nhiều rửa trôi các chất bazơ dễ tan, làm đất chua và tích tụ ô-xít sắt, ô-xít nhôm, tạo ra màu đỏ vàng. Loại đất này gọi là gì?", k: "FERALIT" },
-            { c: "Thảm thực vật rừng ở Việt Nam có lượng sinh khối lớn và năng suất sinh học cao. Trong rừng, thực vật phổ biến là các loài thuộc các họ cây nhiệt đới như họ đậu, vang, dâu tằm,... và họ nào nữa?", k: "DAU" },
-            { c: "Hệ sinh thái rừng nguyên sinh phổ biến ở nước ta là rừng rậm nhiệt đới ẩm lá rộng thường xanh. Do ảnh hưởng của gió mùa, nước ta có các loại rừng nhiệt đới gió mùa khác nhau, từ rừng thường xanh, rừng nửa rụng lá, đến rừng thưa khô rụng lá và loại cây nào?", k: "TRAMCOCAYBUI" }
+            { c: "Cùng với gió mùa Đông Bắc, ở nước ta còn có sự hoạt động của Tín phong bán cầu Bắc. Từ Đà Nẵng trở vào, Tín phong thổi theo hướng nào chiếm ưu thế?", k: "DONGBAC" },
+            { c: "Đầu mùa hạ, khối khí nhiệt đới ẩm từ Bắc Ấn Độ Dương di chuyển theo hướng tây nam, gây mưa lớn cho Nam Bộ. Khi vượt qua dãy Trường Sơn, khối khí trở nên khô nóng. Gọi là hiệu ứng gì?", k: "HIEUUNGPHON" },
+            { c: "Vào giữa và cuối mùa hạ, gió mùa Tây Nam xuất phát từ áp cao cận chí tuyến hoạt động mạnh. Ở đồng bằng sông Hồng, gió này thổi vào theo hướng nào?", k: "DONGNAM" },
+            { c: "Do đặc điểm nóng ẩm của khí hậu, quá trình phong hoá diễn ra mạnh mẽ hình thành các dạng hang động, thung khô ở vùng núi đá vôi. Địa hình này gọi là gì?", k: "CAXTO" },
+            { c: "Quá trình xâm thực diễn ra mạnh mẽ ở miền đồi núi, dẫn đến bồi tụ ở vùng đồng bằng. Hình thành các đồng bằng châu thổ rộng lớn như đồng bằng sông Cửu Long và đồng bằng nào?", k: "SONGHONG" },
+            { c: "Trong vùng khí hậu nhiệt đới ẩm, mưa nhiều rửa trôi các chất bazơ dễ tan, làm đất chua và tích tụ ô-xít sắt, ô-xít nhôm, tạo ra màu đỏ vàng. Loại đất này gọi là gì?", k: "FERALIT" },
+            { c: "Hệ sinh thái rừng nguyên sinh phổ biến ở nước ta là rừng rậm nhiệt đới ẩm lá rộng thường xanh. Do ảnh hưởng của gió mùa, nước ta có rừng nửa rụng lá, đến rừng thưa khô rụng lá và loại cây nào?", k: "TRAMCOCAYBUI" }
         ];
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -393,7 +405,6 @@
             } catch(e) { console.warn("Audio blocked"); }
         }
 
-        // Web Audio API Synth (Thay thế file MP3, siêu nhẹ, tải tức thì)
         function playSound(type) {
             if (!audioCtx) return;
             try {
@@ -429,6 +440,7 @@
 
         const ui = {
             login: document.getElementById('login-screen'),
+            admin: document.getElementById('admin-screen'),
             game: document.getElementById('game-screen'),
             result: document.getElementById('result-screen'),
             btnStart: document.getElementById('btnStart'),
@@ -442,42 +454,58 @@
             score: document.getElementById('scoreDisplay'),
             nameIn: document.getElementById('pilotName'),
             classIn: document.getElementById('pilotClass'),
-            errorMsg: document.getElementById('errorMsg')
+            errorMsg: document.getElementById('errorMsg'),
+            btnShowAdmin: document.getElementById('btnShowAdmin'),
+            btnConfirmAdmin: document.getElementById('btnConfirmAdmin'),
+            btnCancelAdmin: document.getElementById('btnCancelAdmin'),
+            adminPwd: document.getElementById('adminPwd'),
+            adminMsg: document.getElementById('adminMsg')
         };
 
-        const MAX_QUESTIONS = 10; // Chơi 10 câu ngẫu nhiên mỗi ván
-        const MAX_PLAYS = 2; // Giới hạn 2 lượt chơi
+        const MAX_QUESTIONS = 10; 
+        const MAX_PLAYS = 2; 
         let playQueue = [];
         let qIndex = 0;
         let score = 0;
         let timeLeft = 15 * 60;
         let timerInterval;
         let currentKeyword = "";
-        let userInput = []; // Lưu trữ đối tượng { letter, btn }
+        let userInput = []; 
         let isProcessing = false;
         let typeTimeout;
 
-        
-        // Kiểm tra số lượt chơi bằng LocalStorage (Chống gian lận lượt)
+        // Xử lý LocalStorage (Giới hạn lượt chơi 2 lần)
         let playCount = parseInt(localStorage.getItem('k12DecoderPlays') || '0');
         if (playCount >= MAX_PLAYS) {
             ui.btnStart.disabled = true;
             ui.btnStart.style.filter = "grayscale(1)";
-            ui.errorMsg.innerText = `⛔ Đã hết lượt làm bài (${MAX_PLAYS}/${MAX_PLAYS}).`;
+            ui.errorMsg.innerText = `⛔ Đã hết lượt làm bài (${MAX_PLAYS}/${MAX_PLAYS}). Vui lòng liên hệ Giáo viên để mở khóa.`;
         }
 
-        // --- TÍNH NĂNG KHÔI PHỤC LƯỢT CHO GIÁO VIÊN ---
-        document.getElementById('btnAdmin').addEventListener('pointerdown', () => {
-            const pwd = prompt("XÁC THỰC QUYỀN GIÁO VIÊN\nNhập mật khẩu để khôi phục lượt chơi cho học sinh (Mật khẩu: k12):");
+        ui.btnShowAdmin.addEventListener('pointerdown', () => {
+            ui.login.classList.remove('active');
+            ui.admin.classList.add('active');
+            ui.adminMsg.innerText = "";
+            ui.adminPwd.value = "";
+        });
+
+        ui.btnCancelAdmin.addEventListener('pointerdown', () => {
+            ui.admin.classList.remove('active');
+            ui.login.classList.add('active');
+        });
+
+        ui.btnConfirmAdmin.addEventListener('pointerdown', () => {
+            const pwd = ui.adminPwd.value.trim();
             if (pwd === "k12" || pwd === "K12") {
                 localStorage.removeItem('k12DecoderPlays');
-                alert("✅ Đã khôi phục lượt chơi thành công! Học sinh có thể chơi lại từ đầu.");
-                location.reload();
-            } else if (pwd !== null) {
-                alert("❌ Mật khẩu không chính xác!");
+                ui.adminMsg.style.color = "var(--neon-green)";
+                ui.adminMsg.innerText = "✅ Khôi phục thành công! Đang tải lại...";
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                ui.adminMsg.style.color = "var(--neon-red)";
+                ui.adminMsg.innerText = "❌ Sai mật khẩu!";
             }
         });
-        // ----------------------------------------------
 
         ui.btnStart.addEventListener('pointerdown', () => {
             if (playCount >= MAX_PLAYS) return;
@@ -496,7 +524,7 @@
             ui.login.classList.remove('active');
             ui.game.classList.add('active');
             
-            // Lấy ngẫu nhiên 10 câu từ Database
+            // Xáo trộn Ngân hàng câu hỏi
             let shuffled = [...database];
             for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -517,7 +545,7 @@
                 const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
                 const s = (timeLeft % 60).toString().padStart(2, '0');
                 ui.timer.innerText = `${m}:${s}`;
-                if (timeLeft <= 60) ui.timer.style.color = "var(--neon-red)"; // Báo động đỏ ở phút cuối
+                if (timeLeft <= 60) ui.timer.style.color = "var(--neon-red)";
                 if (timeLeft <= 0) endGame(false);
             }, 1000);
         }
@@ -535,7 +563,6 @@
             const qData = playQueue[qIndex];
             currentKeyword = qData.k;
             
-            // Xây dựng ô chứa chữ cái dựa trên độ dài từ khóa
             ui.slots.innerHTML = '';
             for(let i=0; i<currentKeyword.length; i++) {
                 const slot = document.createElement('div');
@@ -543,7 +570,6 @@
                 ui.slots.appendChild(slot);
             }
 
-            // Xây dựng các nút chữ cái xáo trộn (Anagram)
             ui.letters.innerHTML = '';
             let chars = currentKeyword.split('');
             for (let i = chars.length - 1; i > 0; i--) {
@@ -555,12 +581,10 @@
                 const btn = document.createElement('div');
                 btn.className = 'letter-btn';
                 btn.innerText = char;
-                // Bắt sự kiện pointerdown thay vì click để tối ưu tốc độ phản hồi trên điện thoại
                 btn.addEventListener('pointerdown', () => tapLetter(btn, char));
                 ui.letters.appendChild(btn);
             });
 
-            // Hiệu ứng đánh chữ (Typewriter) cho bối cảnh câu hỏi
             ui.qText.innerHTML = '';
             clearTimeout(typeTimeout);
             let textToType = qData.c + " <span class='corrupted'>[***]</span>";
@@ -568,7 +592,6 @@
             
             function typeWriter() {
                 if (i < textToType.length) {
-                    // Xử lý không bị vỡ thẻ HTML bên trong
                     if(textToType.charAt(i) === '<') {
                         let tag = "";
                         while(textToType.charAt(i) !== '>' && i < textToType.length) {
@@ -577,7 +600,6 @@
                         }
                         tag += '>';
                         ui.qText.innerHTML += tag;
-                        i++;
                     } else {
                         ui.qText.innerHTML += textToType.charAt(i);
                         i++;
@@ -594,7 +616,7 @@
             if (userInput.length >= currentKeyword.length) return;
 
             playSound('tap');
-            btnElement.classList.add('hidden'); // Ẩn nút đi
+            btnElement.classList.add('hidden'); 
             
             userInput.push({ letter: char, btn: btnElement });
             updateSlots();
@@ -603,10 +625,8 @@
         ui.btnClear.addEventListener('pointerdown', () => {
             if (isProcessing || userInput.length === 0) return;
             playSound('tap');
-            
-            // Rút lại chữ cái cuối cùng
             const last = userInput.pop();
-            last.btn.classList.remove('hidden'); // Hiển thị lại nút
+            last.btn.classList.remove('hidden');
             updateSlots();
         });
 
@@ -626,7 +646,6 @@
         ui.btnSubmit.addEventListener('pointerdown', () => {
             if (isProcessing) return;
             if (userInput.length < currentKeyword.length) {
-                // Nhập chưa đủ chữ đã bấm giải mã
                 ui.slots.style.animation = "shake 0.3s";
                 setTimeout(() => ui.slots.style.animation = "none", 300);
                 return;
@@ -636,12 +655,10 @@
             const submittedWord = userInput.map(item => item.letter).join('');
 
             if (submittedWord === currentKeyword) {
-                // ĐÚNG - KẾT QUẢ HOÀN HẢO
                 playSound('success');
                 score++;
                 updateScore();
                 ui.terminal.classList.add('flash-green');
-                // Hiển thị từ khóa đã giải mã
                 ui.qText.innerHTML = ui.qText.innerHTML.replace("<span class=\"corrupted\">[***]</span>", `<span class="highlight">${currentKeyword}</span>`);
                 
                 setTimeout(() => {
@@ -650,7 +667,6 @@
                 }, 1500);
 
             } else {
-                // SAI - TRỪNG PHẠT NỔ BOM, HIỆN ĐÁP ÁN RỒI CHUYỂN CÂU
                 triggerExplosion();
             }
         });
@@ -660,7 +676,8 @@
             ui.terminal.classList.add('flash-red');
             document.body.classList.add('shake');
             
-            ui.qText.innerHTML = `<span class="corrupted" style="font-size: 24px;">LỖI: SAI MÃ GIẢI!<br>ĐÁP ÁN ĐÚNG: <span class="highlight">${currentKeyword}</span><br>DỮ LIỆU BỊ PHÁ HỦY!</span>`;
+            // Hiện đáp án đúng để học sinh ghi nhớ
+            ui.qText.innerHTML = `<span class="corrupted" style="font-size: 24px;">LỖI: SAI MÃ GIẢI!<br><span style="color:#fff;">ĐÁP ÁN ĐÚNG:</span> <span class="highlight" style="font-size: 30px;">${currentKeyword}</span><br>DỮ LIỆU ĐÃ BỊ PHÁ HỦY!</span>`;
             
             const slots = ui.slots.children;
             for(let i=0; i<slots.length; i++) {
@@ -668,16 +685,16 @@
                 slots[i].style.color = "var(--neon-red)";
             }
 
-            // Gọi hàm sinh mảnh vỡ tại vị trí terminal
             const rect = ui.terminal.getBoundingClientRect();
             createExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ff003c');
             playSound('explode');
 
+            // Chờ 3.5 giây để học sinh đọc đáp án rồi tự chuyển câu
             setTimeout(() => {
                 document.body.classList.remove('shake');
                 qIndex++;
                 loadQuestion();
-            }, 3000); // Tăng thời gian chờ lên 3s để HS kịp đọc đáp án
+            }, 3500); 
         }
 
         function updateScore() {
@@ -690,12 +707,10 @@
             
             const name = ui.nameIn.value;
             const cls = ui.classIn.value;
-            // Tạo mã ngẫu nhiên để xác thực kết quả nộp bài
             const code = `K12-DEC-${Math.floor(1000 + Math.random()*9000)}`;
             
             document.getElementById('k12Code').innerText = `MÃ TRUY XUẤT: ${code}`;
 
-            // Quy định thưởng điểm: Tuyệt đối (+0.5), Có sai sót (+0.25)
             if (score === MAX_QUESTIONS) {
                 triggerBigBang();
                 setTimeout(() => {
@@ -714,9 +729,9 @@
                 document.getElementById('resultTitle').style.color = "var(--neon-red)";
                 document.getElementById('resultMsg').innerHTML = 
                     `Kỹ sư <b>${name}</b> (Lớp ${cls}).<br>
-                        Một số dữ liệu đã bị mất vĩnh viễn do giải mã sai.<br>
-                        Số tệp khôi phục: ${score}/${MAX_QUESTIONS}<br><br>
-                        <b style="color:#ffcc00; font-size:24px;">ĐIỂM GHI NHẬN: +0.25 ĐIỂM</b>`;
+                    Một số dữ liệu đã bị mất vĩnh viễn do giải mã sai.<br>
+                    Số tệp khôi phục: ${score}/${MAX_QUESTIONS}<br><br>
+                    <b style="color:#ffcc00; font-size:24px;">ĐIỂM GHI NHẬN: +0.25 ĐIỂM</b>`;
             }
         }
 
@@ -738,12 +753,10 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Khởi tạo các vì sao lấp lánh nền
         for(let i=0; i<150; i++) {
             stars.push({ x: Math.random() * w, y: Math.random() * h, size: Math.random() * 1.5, speed: Math.random() * 0.5 + 0.1 });
         }
 
-        // Tạo vụ nổ cục bộ khi sai
         function createExplosion(x, y, color) {
             for(let i=0; i<50; i++) {
                 particles.push({
@@ -756,7 +769,6 @@
             }
         }
 
-        // Tạo vụ nổ vinh quang và mưa sao băng khi đúng hoàn toàn
         function triggerBigBang() {
             isBigBang = true;
             document.getElementById('victoryMsg').classList.add('show');
@@ -779,7 +791,6 @@
             }, 4000);
         }
 
-        // Vòng lặp đồ họa 60FPS
         function renderLoop() {
             bgCtx.fillStyle = isBigBang ? 'rgba(0,0,0,0.1)' : '#020205';
             bgCtx.fillRect(0, 0, w, h);
@@ -795,7 +806,6 @@
 
             fxCtx.clearRect(0, 0, w, h);
             
-            // Vẽ hạt nổ vụn (Particles)
             for(let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.life -= p.decay;
@@ -808,7 +818,6 @@
                 }
             }
 
-            // Vẽ Mưa sao băng (Meteors) khi BigBang
             if (isBigBang && Math.random() < 0.3) {
                 meteors.push({ x: Math.random() * w + w/2, y: -50, length: Math.random() * 100 + 50, speed: Math.random() * 20 + 10 });
             }
